@@ -29,7 +29,7 @@ export default function Home({ posts }) {
   return (
     <div className='mx-auto flex-1 flex-col'>
       {posts.map(({ slug, frontmatter, content }) => (
-        <div key={slug}>
+        <div key={slug} className='py-4 odd:bg-white even:bg-slate-100'>
           <PostPage frontmatter={frontmatter} content={content} slug={slug} />
         </div>
       ))}
