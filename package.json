@@ -10,7 +10,7 @@
     "lint": "next lint",
     "deploy": "next build && next export -o out/ && npm run gh-package && npm run gh-push",
     "gh-package": "touch out/.nojekyll && git add out/ && git commit -m \"Deploy pages\"",
-    "gh-push": "git subtree split --prefix dist -b gh-pages && git push -f origin gh-pages:gh-pages && git branch -D gh-pages"
+    "gh-push": "git subtree split --prefix out -b gh-pages && git push -f origin gh-pages:gh-pages && git branch -D gh-pages"
   },
   "dependencies": {
     "gray-matter": "^4.0.3",
