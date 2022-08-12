@@ -178,3 +178,5 @@ int main(void) {
 ```
 
 So I guess the TLDR here is try and test them all?
+
+The case where the entire function is optimized away seems funny to me, what if you hand rolled a sleep with a big loop? Wouldn't that be grand if it just disappeared?
