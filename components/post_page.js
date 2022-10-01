@@ -21,7 +21,13 @@ export default function PostPage({ slug, frontmatter, content }) {
                 />
             </div>
             }
-            <div dangerouslySetInnerHTML={{ __html: md().render(content) }} />
+            <div dangerouslySetInnerHTML={{
+                __html: md({
+                    html: true,
+                    linkify: true,
+                    typographer: true
+                }).render(content)
+            }} />
         </div>
     )
 }
