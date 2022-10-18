@@ -1,4 +1,280 @@
-<!DOCTYPE html><html><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width"/><title>Fire!</title><link rel="shortcut icon" href="/favicon/favicon.ico"/><meta name="next-head-count" content="4"/><link rel="preload" href="https://probablyafire.com/_next/static/css/30c583f1253ed16e.css" as="style"/><link rel="stylesheet" href="https://probablyafire.com/_next/static/css/30c583f1253ed16e.css" data-n-g=""/><noscript data-n-css=""></noscript><script defer="" nomodule="" src="https://probablyafire.com/_next/static/chunks/polyfills-0d1b80a048d4787e.js"></script><script src="https://probablyafire.com/_next/static/chunks/webpack-9911b5b847fe3fc5.js" defer=""></script><script src="https://probablyafire.com/_next/static/chunks/framework-e70c6273bfe3f237.js" defer=""></script><script src="https://probablyafire.com/_next/static/chunks/main-ca6fc1fda9df2b13.js" defer=""></script><script src="https://probablyafire.com/_next/static/chunks/pages/_app-d50bdd5c50a25d81.js" defer=""></script><script src="https://probablyafire.com/_next/static/chunks/163-5a9793f066fcfd90.js" defer=""></script><script src="https://probablyafire.com/_next/static/chunks/pages/index-8d3c8270cc1341a3.js" defer=""></script><script src="https://probablyafire.com/_next/static/xX-TsidIi6DRZMeWD3LTA/_buildManifest.js" defer=""></script><script src="https://probablyafire.com/_next/static/xX-TsidIi6DRZMeWD3LTA/_ssgManifest.js" defer=""></script></head><body><div id="__next" data-reactroot=""><div><div class="flex flex-col min-h-screen"><header class="bg-slate-800 mb-8 py-4"><div class="container mx-auto flex flex-col justify-center"><a class="mx-auto text-4xl text-slate-200" href="/">Grant&#x27;s Current Events</a></div></header><main class="container mx-auto flex-1"><div class="mx-auto flex-1 flex-col"><div class="py-4 odd:bg-white even:bg-slate-100"><div class="prose mx-auto"><div><p class="mb-0">2022-08-10</p></div><a class="no-underline" href="/posts/gcc-optimization-levels"><h1>GCC Optimization Levels</h1></a><div><p>Optimization levels are really weird.</p>
+<!DOCTYPE html><html><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width"/><title>Fire!</title><link rel="shortcut icon" href="/favicon/favicon.ico"/><meta name="next-head-count" content="6"/><link rel="preload" href="https://probablyafire.com/_next/static/css/30c583f1253ed16e.css" as="style"/><link rel="stylesheet" href="https://probablyafire.com/_next/static/css/30c583f1253ed16e.css" data-n-g=""/><noscript data-n-css=""></noscript><script defer="" nomodule="" src="https://probablyafire.com/_next/static/chunks/polyfills-0d1b80a048d4787e.js"></script><script src="https://probablyafire.com/_next/static/chunks/webpack-9911b5b847fe3fc5.js" defer=""></script><script src="https://probablyafire.com/_next/static/chunks/framework-e70c6273bfe3f237.js" defer=""></script><script src="https://probablyafire.com/_next/static/chunks/main-ca6fc1fda9df2b13.js" defer=""></script><script src="https://probablyafire.com/_next/static/chunks/pages/_app-16304cb0dada904e.js" defer=""></script><script src="https://probablyafire.com/_next/static/chunks/163-5a9793f066fcfd90.js" defer=""></script><script src="https://probablyafire.com/_next/static/chunks/pages/index-78d8687aaae43895.js" defer=""></script><script src="https://probablyafire.com/_next/static/Zbns44Kbi7Zsk4KPeo1xS/_buildManifest.js" defer=""></script><script src="https://probablyafire.com/_next/static/Zbns44Kbi7Zsk4KPeo1xS/_ssgManifest.js" defer=""></script></head><body><div id="__next" data-reactroot=""><div><div class="flex flex-col min-h-screen"><header class="bg-slate-800 mb-8 py-4"><div class="container mx-auto flex flex-col justify-center"><a class="mx-auto text-4xl text-slate-200" href="/">Grant&#x27;s Current Events</a></div></header><main class="container mx-auto flex-1"><div class="mx-auto flex-1 flex-col"><div class="py-4 odd:bg-white even:bg-slate-100"><div class="prose mx-auto"><div><p class="mb-0">2022-09-30</p></div><a class="no-underline" href="/posts/avr-toolchain"><h1>The AVR Toolchain</h1></a><div><p>One of the goals I had when I started getting into the digital side of electronics was to get a good grasp of the GNU toolchain and some of the avr tools. The arduino platform is nice but it doesn’t really give you a good grasp of what’s actually happening so here’s a primer from an attiny perspective and some of the common tools used to understand what’s in the final binary.</p>
+<p><a href="https://www.nongnu.org/avr-libc/user-manual/overview.html">Theres already a great overview of the main avr toolchain</a>), but this article provides some examples built against a simple binary to wrap your head around it all.</p>
+<h1>Tools</h1>
+<p>All of these examples are build with the attiny25 family in mind and uses a binary from a really dumb program in , <code>loop.c</code>:</p>
+<pre><code>int main(void) {
+    int i = 0;
+    while(i &lt; 10000) {
+        i++;
+    }
+}
+</code></pre>
+<p>This was compiled to the <code>loop</code> binary using <code>avr-gcc -g -mmcu=avr25 -o loop loop.c</code></p>
+<ul>
+<li><code>-g</code> to add debugging symbols, gives an easier time linking back to the individual line of code.</li>
+<li><code> -mmcu=avr25</code> specifies the AVR instruction set architecture to use. <a href="https://gcc.gnu.org/onlinedocs/gcc/AVR-Options.html#AVR-Options">Change this to whatever chip you’re targeting.</a></li>
+</ul>
+<p>At a high level, avr-libc provides a standard c library that can be compiled with gcc. The tools here are mostly provided through binutils and you would normally use make to stitch it all together.</p>
+<h2>Objdump</h2>
+<p>This is the swiss army knife to picking apart object files. Typically used to take a look at the disassembly:</p>
+<pre><code>&gt; avr-objdump -m avr25 -S loop
+
+loop:     file format elf32-avr
+
+Disassembly of section .text:
+
+00000000 &lt;main&gt;:
+int main(void) {
+   0:	cf 93       	push	r28
+   2:	df 93       	push	r29
+   4:	00 d0       	rcall	.+0      	; 0x6 &lt;L0^A&gt;
+
+00000006 &lt;L0^A&gt;:
+   6:	cd b7       	in	r28, 0x3d	; 61
+   8:	de b7       	in	r29, 0x3e	; 62
+
+0000000a &lt;.Loc.1&gt;:
+    int i = 0;
+   a:	1a 82       	std	Y+2, r1	; 0x02
+   c:	19 82       	std	Y+1, r1	; 0x01
+
+0000000e &lt;.Loc.2&gt;:
+    while(i &lt; 10000) {
+   e:	05 c0       	rjmp	.+10     	; 0x1a &lt;.L2&gt;
+
+00000010 &lt;.L3&gt;:
+        i++;
+  10:	89 81       	ldd	r24, Y+1	; 0x01
+  12:	9a 81       	ldd	r25, Y+2	; 0x02
+  14:	01 96       	adiw	r24, 0x01	; 1
+  16:	9a 83       	std	Y+2, r25	; 0x02
+  18:	89 83       	std	Y+1, r24	; 0x01
+
+0000001a &lt;.L2&gt;:
+    while(i &lt; 10000) {
+  1a:	89 81       	ldd	r24, Y+1	; 0x01
+  1c:	9a 81       	ldd	r25, Y+2	; 0x02
+  1e:	80 31       	cpi	r24, 0x10	; 16
+  20:	97 42       	sbci	r25, 0x27	; 39
+  22:	b4 f3       	brlt	.-20     	; 0x10 &lt;.L3&gt;
+  24:	80 e0       	ldi	r24, 0x00	; 0
+  26:	90 e0       	ldi	r25, 0x00	; 0
+
+00000028 &lt;.Loc.5&gt;:
+    }
+  28:	0f 90       	pop	r0
+  2a:	0f 90       	pop	r0
+  2c:	df 91       	pop	r29
+  2e:	cf 91       	pop	r28
+  30:	08 95       	ret
+</code></pre>
+<p>The <code>-S</code> flag attempts to intermix the original source code along with the assembly.</p>
+<p>The output of this dump is a little confusing at first but let’s break it down. Looking at the counter increment code:</p>
+<pre><code># This is the address in the elf file and the associated debugging symbol &lt;.L3&gt;
+00000010 &lt;.L3&gt;:
+
+# We're looking at the increment instruction here
+        i++;
+
+# 10 is the address, 89 81 is the actual data.
+# objdump translates this to ldd	r24, Y+1 for an attiny.
+  10:	89 81       	ldd	r24, Y+1	; 0x01
+  12:	9a 81       	ldd	r25, Y+2	; 0x02
+  14:	01 96       	adiw	r24, 0x01	; 1
+  16:	9a 83       	std	Y+2, r25	; 0x02
+  18:	89 83       	std	Y+1, r24	; 0x01
+</code></pre>
+<h2>Hexdump</h2>
+<p>Probably not that useful but shows a raw view of the file.</p>
+<p>1 byte per line dump:</p>
+<pre><code>&gt; hexdump -v -e '1/1 &quot;%02x &quot; &quot;\n&quot;' loop
+7f
+45
+4c
+46
+01
+01
+01
+... a lot more is dumped
+</code></pre>
+<h2>Od - Octal Dump</h2>
+<p>Way simpler to use than hexdump.</p>
+<p>No address: <code>-An</code> and just text: <code>-a</code>.</p>
+<pre><code>&gt; od -An -a loop
+del   E   L   F soh soh soh nul nul nul nul nul nul nul nul nul
+stx nul   S nul soh nul nul nul nul nul nul nul   4 nul nul nul
+84  bs nul nul  em nul nul nul   4 nul  sp nul stx nul   ( nul
+cr nul  ff nul soh nul nul nul   t nul nul nul nul nul nul nul
+... once again, lots more dumped
+</code></pre>
+<h2>Size</h2>
+<p>Easy way to see the sizes of each section.</p>
+<pre><code>&gt; avr-size --format=SysV loop
+loop  :
+section          size      addr
+.text              50         0
+.data               0   8388704
+.comment           36         0
+.debug_aranges     32         0
+.debug_info        85         0
+.debug_abbrev      78         0
+.debug_line        91         0
+.debug_frame       52         0
+.debug_str         95         0
+Total             519
+</code></pre>
+<h2>Objcopy</h2>
+<p>Elf files contain a bunch of unnecessary sections that would be a waste to store in our limited flash space on the target, like all the debugging sections and comments. This command is similar to <code>strip</code> but also encodes the file from elf to various formats.</p>
+<h3>Intel hex</h3>
+<p>Most microcontrollers code uploads use an ihex file format rather than an elf file.</p>
+<p>Building ihex from an elf:</p>
+<pre><code>&gt; avr-objcopy -j .text -j .data -O ihex loop loop.hex &amp;&amp; cat loop.hex
+:10000000CF93DF9300D0CDB7DEB71A82198205C037
+:1000100089819A8101969A83898389819A81803125
+:100020009742B4F380E090E00F900F90DF91CF9172
+:02003000089531
+:00000001FF
+</code></pre>
+<h3>Binary</h3>
+<p>You can take a look at the raw binary if hex is annoying to look at. Not that this is really useful outside of educational purposes.</p>
+<pre><code># first dump to a binary file
+&gt; avr-objcopy -O binary --only-section=.text main test.bin
+
+# Now display the binary for one instruction per line, `xxd` can handle the conversion:
+&gt; xxd -b -c 2 test.bin
+00000000: 00001110 11000000  ..
+00000002: 00010101 11000000  ..
+00000004: 00010100 11000000  ..
+00000006: 00010011 11000000  ..
+00000008: 00010010 11000000  ..
+0000000a: 00010001 11000000  ..
+0000000c: 00010000 11000000  ..
+0000000e: 00001111 11000000  ..
+00000010: 00001110 11000000  ..
+00000012: 00001101 11000000  ..
+00000014: 00001100 11000000  ..
+00000016: 00001011 11000000  ..
+00000018: 00001010 11000000  ..
+0000001a: 00001001 11000000  ..
+0000001c: 00001000 11000000  ..
+0000001e: 00010001 00100100  .$
+00000020: 00011111 10111110  ..
+00000022: 11001111 11100101  ..
+00000024: 11010010 11100000  ..
+00000026: 11011110 10111111  ..
+00000028: 11001101 10111111  ..
+0000002a: 00000010 11010000  ..
+0000002c: 00000100 11000000  ..
+0000002e: 11101000 11001111  ..
+00000030: 10010000 11100000  ..
+00000032: 10000000 11100000  ..
+00000034: 00001000 10010101  ..
+00000036: 11111000 10010100  ..
+00000038: 11111111 11001111  ..
+
+</code></pre>
+<h2>AVR GCC</h2>
+<p>This is the main compiler I use when working with avr chips.</p>
+<p><a href="https://gcc.gnu.org/onlinedocs/gcc/AVR-Options.html#AVR-Options">Supported architectures</a></p>
+<p><a href="https://gcc.gnu.org/wiki/avr-gcc">Wiki</a></p>
+<h3>Standards</h3>
+<p>C has published new standard for the language over time. New standards bring new features or datatypes. For an example of one I like, c99 introduced boolean datatypes. There are a number of different standards, as of 2022 theres c89, gnu89, c94, c99, gnu99, c11, gnu11, c17, gnu17, c2x, and gnu2x. I’m not sure why each release has a GNU equivalent or the history behind that, <a href="https://clang.llvm.org/docs/UsersManual.html#differences-between-various-standard-modes">but there are differences, mostly a couple keywords and macros</a>.</p>
+<p><strong>Note</strong> use <code>gnu*</code> standards for arduino, I’ve seen some cases in the <a href="https://github.com/SpenceKonde/ATTinyCore">SpencerKonde ATtiny core</a> where the <code>asm</code> keyword is used.</p>
+<h3>Linking</h3>
+<p>The avr-gcc compiler not only has many AVR ISAs compilation support, it also provides the linker with defaults. This means that the architecture flag <code>-m</code> needs to always be specified.</p>
+<p>For AVRs, the interrupt table starts at 0x000. Dumping the table for an attiny85, compiled with <code>-mmcu=attiny85</code>:</p>
+<pre><code>&gt; avr-objdump -S  -m avr25 loop
+...
+00000000 &lt;__vectors&gt;:
+   0:	0e c0       	rjmp	.+28     	; 0x1e &lt;__ctors_end&gt;
+   2:	15 c0       	rjmp	.+42     	; 0x2e &lt;__bad_interrupt&gt;
+   4:	14 c0       	rjmp	.+40     	; 0x2e &lt;__bad_interrupt&gt;
+   6:	13 c0       	rjmp	.+38     	; 0x2e &lt;__bad_interrupt&gt;
+   8:	12 c0       	rjmp	.+36     	; 0x2e &lt;__bad_interrupt&gt;
+   a:	11 c0       	rjmp	.+34     	; 0x2e &lt;__bad_interrupt&gt;
+   c:	10 c0       	rjmp	.+32     	; 0x2e &lt;__bad_interrupt&gt;
+   e:	0f c0       	rjmp	.+30     	; 0x2e &lt;__bad_interrupt&gt;
+  10:	0e c0       	rjmp	.+28     	; 0x2e &lt;__bad_interrupt&gt;
+  12:	0d c0       	rjmp	.+26     	; 0x2e &lt;__bad_interrupt&gt;
+  14:	0c c0       	rjmp	.+24     	; 0x2e &lt;__bad_interrupt&gt;
+  16:	0b c0       	rjmp	.+22     	; 0x2e &lt;__bad_interrupt&gt;
+  18:	0a c0       	rjmp	.+20     	; 0x2e &lt;__bad_interrupt&gt;
+  1a:	09 c0       	rjmp	.+18     	; 0x2e &lt;__bad_interrupt&gt;
+  1c:	08 c0       	rjmp	.+16     	; 0x2e &lt;__bad_interrupt&gt;
+</code></pre>
+<p>Compare this to the Arduino Uno’s ATmega328p, compiled with <code>-mmcu=atmega328p</code>:</p>
+<pre><code>&gt; avr-objdump -S  -m avr5 loop
+...
+00000000 &lt;__vectors&gt;:
+   0:	0c 94 34 00 	jmp	0x68	; 0x68 &lt;__ctors_end&gt;
+   4:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+   8:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+   c:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  10:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  14:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  18:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  1c:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  20:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  24:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  28:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  2c:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  30:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  34:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  38:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  3c:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  40:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  44:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  48:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  4c:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  50:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  54:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  58:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  5c:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  60:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+  64:	0c 94 3e 00 	jmp	0x7c	; 0x7c &lt;__bad_interrupt&gt;
+</code></pre>
+<h2>Avrdude</h2>
+<p>Pretty slick tool to read and write memory on your avr chip.</p>
+<p>The Arduino platform has a pretty good integration with these tools. I found it to be helpful to turn the ide verbosity up to read the avrdude commands that are run. There’s a config file that comes from whatever core you are using that might be useful.</p>
+<p>The following examples are based on an attiny85 connected to a Sparkfun tinyIsp programmer plugged into a usb port.</p>
+<p>Upload an ihex file:</p>
+<pre><code># -U [memory(flash/eeprom)]:[w/r]:[input/output file]:[i stands for intel hex]
+avrdude -v -c usbtiny -B8 -p attiny85 -U flash:w:hello.hex:i
+</code></pre>
+<p>Dump the flash:</p>
+<pre><code>avrdude -v -c usbtiny -B8 -p attiny85 -U flash:r:dump.hex:i
+avr-objdump -sSd -m avr25 dump.hex
+</code></pre>
+<p>Terminal mode to dump part of eeprom:</p>
+<pre><code>avrdude -v -c usbtiny -B8 -p attiny85 -t
+&gt;&gt;&gt; dump eeprom 0 16
+
+Reading | ################################################## | 100% 0.02s
+
+0000  ff ff ff ff ff ff ff ff  ff ff ff ff ff ff ff ff  |................|
+</code></pre>
+<p>Changing the clock speed from 8Mhz internal to 1Mhz internal. Note that the F_CPU macro in your code needs to match the fuse value. Use a fuse calculator for these.
+Setting the fuses:</p>
+<pre><code>avrdude -v -c usbtiny -B8 -p attiny85 -t
+&gt;&gt;&gt; dump lfuse
+
+Reading | ################################################## | 100% 0.00s
+
+0000  e2                                                |.               |
+
+&gt;&gt;&gt; write lfuse 0 0x62
+
+Info: Writing 1 bytes starting from address 0x00
+
+Writing | ################################################## | 100% 0.01s
+
+&gt;&gt;&gt; read lfuse
+
+Reading | ################################################## | 100% 0.00s
+
+0000  62                                                |b               |
+</code></pre>
+</div></div></div><div class="py-4 odd:bg-white even:bg-slate-100"><div class="prose mx-auto"><div><p class="mb-0">2022-08-10</p></div><a class="no-underline" href="/posts/gcc-optimization-levels"><h1>GCC Optimization Levels</h1></a><div><p>Optimization levels are really weird.</p>
 <p>Using the function and compiling for an attiny85, ie <a href="https://www.nongnu.org/avr-libc/user-manual/using_tools.html"><code>--mmcu=attiny85</code></a>.</p>
 <pre><code>int main(void) {
     int i = 0;
@@ -7,7 +283,7 @@
     }
 }
 </code></pre>
-<p>We can disassemble with <code>avr-objdump -sS -m avr25 led</code>. As a disclaimer, I'm not pretending I know what any of this means.</p>
+<p>We can disassemble with <code>avr-objdump -sS -m avr25 led</code>. As a disclaimer, I’m not pretending I know what any of this means.</p>
 <p>Using <code>-Os</code> ie optimize for code side, it looks like the entire function is optimized away!</p>
 <pre><code>&gt; avr-objdump -sS -m avr25 led
 ...
@@ -157,14 +433,14 @@ int main(void) {
   34:	08 95       	ret
 </code></pre>
 <p>So I guess the TLDR here is try and test them all?</p>
-<p>The case where the entire function is optimized away seems funny to me, what if you hand rolled a sleep with a big loop? Wouldn't that be grand if it just disappeared?</p>
+<p>The case where the entire function is optimized away seems funny to me, what if you hand rolled a sleep with a big loop? Wouldn’t that be grand if it just disappeared?</p>
 </div></div></div><div class="py-4 odd:bg-white even:bg-slate-100"><div class="prose mx-auto"><div><p class="mb-0">2022-07-21</p></div><a class="no-underline" href="/posts/temp-sensor"><h1>Thermometer</h1></a><div><p>Why buy a $10 thermometer when you can spend $100 and build one yourself in 15-20 hours?</p>
 <p><img src="/images/thermometer/thermometer.jpg" alt="Thermometer"></p>
 <p>Caitlin kept saying the thermostat was off so I build this to find out. As a bonus, it also tells me my house is too humid so now I have to also figure that out. Fun.</p>
 <p>I was stubborn and wanted to use an attiny85 regardless of whether it was a good idea or not.
-5 pins isn't enough to control the display so I used a shift register as an IO expander to talk to the 1602 led display using SPI.</p>
+5 pins isn’t enough to control the display so I used a shift register as an IO expander to talk to the 1602 led display using SPI.</p>
 <p><img src="/images/thermometer/prototype.jpg" alt="Prototype"></p>
-<p>The temp/humidity sensor originally was an aht11 but apparently that unit is extremely sensitive to timing and I couldn't quite get it right with the attiny. I switched to an AM2301B and that used i2c for communication and worked really well.</p>
+<p>The temp/humidity sensor originally was an aht11 but apparently that unit is extremely sensitive to timing and I couldn’t quite get it right with the attiny. I switched to an AM2301B and that used i2c for communication and worked really well.</p>
 <p>First try I soldered everything backwards but I eventually got it right.</p>
 <p><img src="/images/thermometer/board.jpg" alt="Board"></p>
 <p><img src="/images/thermometer/board2.jpg" alt="Board2"></p>
@@ -176,11 +452,11 @@ int main(void) {
 <p>All done!</p>
 <p><img src="/images/thermometer/final.jpg" alt="Final"></p>
 </div></div></div><div class="py-4 odd:bg-white even:bg-slate-100"><div class="prose mx-auto"><div><p class="mb-0">2022-07-16</p></div><a class="no-underline" href="/posts/bench-setup"><h1>Bench Setup</h1></a><div><p><img src="/images/office-early.jpg" alt="Office" title="Office"></p>
-</div></div></div><div class="py-4 odd:bg-white even:bg-slate-100"><div class="prose mx-auto"><div><p class="mb-0">2022-07-15</p></div><a class="no-underline" href="/posts/led-counter"><h1>7 Segment LED Counter</h1></a><div><p>This was a funny project where I tried to build a simple 7 segment led counter without using a microcontroller. Each digit is controlled separately using 4026's and a sub 15 ms clock controlling which led is displayed, targeting a digit using a mux. 15 ms was chosen because it's faster than I could notice the counter changing, kinda like controlling led brightness using pwm. The counter ticks up based on a second slower clock or a button.</p>
+</div></div></div><div class="py-4 odd:bg-white even:bg-slate-100"><div class="prose mx-auto"><div><p class="mb-0">2022-07-15</p></div><a class="no-underline" href="/posts/led-counter"><h1>7 Segment LED Counter</h1></a><div><p>This was a funny project where I tried to build a simple 7 segment led counter without using a microcontroller. Each digit is controlled separately using 4026’s and a sub 15 ms clock controlling which led is displayed, targeting a digit using a mux. 15 ms was chosen because it’s faster than I could notice the counter changing, kinda like controlling led brightness using pwm. The counter ticks up based on a second slower clock or a button.</p>
 <p>I isolated the clocks into separate modules using 555 timers, both of which took forever to solder. One was in a fixed astable mode, the other a toggle-able monostable button debouncer or a bi-stable latch.</p>
-<p>Ran out of diodes on this one...</p>
+<p>Ran out of diodes on this one…</p>
 <p><img src="/images/led-counter.jpg" alt="LED Counter" title="LED Counter"></p>
 </div></div></div><div class="py-4 odd:bg-white even:bg-slate-100"><div class="prose mx-auto"><div><p class="mb-0">2022-07-10</p></div><a class="no-underline" href="/posts/first-oscillator"><h1>Simple Oscillator</h1></a><div><p><img src="/images/first-oscillator.jpg" alt="Oscillator" title="An Oscillator"></p>
 <p>Probably the first circuit I tried to solder together. An astable oscillator that was so
 astable the timing was all over the place!</p>
-</div></div></div></div></main><footer class="bg-slate-800 mt-8 py-4"><div class="container mx-auto flex justify-center text-slate-300">© 2022 Grant Cooksey</div></footer></div></div></div><script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"posts":[{"slug":"gcc-optimization-levels","frontmatter":{"title":"GCC Optimization Levels","date":"2022-08-10","tags":["debugger","gcc","avr"]},"content":"\nOptimization levels are really weird.\n\nUsing the function and compiling for an attiny85, ie [`--mmcu=attiny85`](https://www.nongnu.org/avr-libc/user-manual/using_tools.html).\n```\nint main(void) {\n    int i = 0;\n    while(i \u003c 10000) {\n        i++;\n    }\n}\n```\n\nWe can disassemble with `avr-objdump -sS -m avr25 led`. As a disclaimer, I'm not pretending I know what any of this means.\n\nUsing `-Os` ie optimize for code side, it looks like the entire function is optimized away!\n```\n\u003e avr-objdump -sS -m avr25 led\n...\n00000030 \u003cmain\u003e:\n{\n    int i = 0;\n    while(i \u003c 10000) {\n        i++;\n    }\n}\n  30:\t90 e0       \tldi\tr25, 0x00\t; 0\n  32:\t80 e0       \tldi\tr24, 0x00\t; 0\n  34:\t08 95       \tret\n```\n\nAnd by comparison, using `-O0`, fastest compile time and the gcc default:\n```\n00000030 \u003cmain\u003e:\n// #include \"wait.h\"\n\nint main(void) {\n  30:\tcf 93       \tpush\tr28\n  32:\tdf 93       \tpush\tr29\n  34:\t00 d0       \trcall\t.+0      \t; 0x36 \u003cL0^A\u003e\n\n00000036 \u003cL0^A\u003e:\n  36:\tcd b7       \tin\tr28, 0x3d\t; 61\n  38:\tde b7       \tin\tr29, 0x3e\t; 62\n\n0000003a \u003c.Loc.1\u003e:\n    int i = 0;\n  3a:\t1a 82       \tstd\tY+2, r1\t; 0x02\n  3c:\t19 82       \tstd\tY+1, r1\t; 0x01\n\n0000003e \u003c.Loc.2\u003e:\n    while(i \u003c 10000) {\n  3e:\t05 c0       \trjmp\t.+10     \t; 0x4a \u003c.L2\u003e\n\n00000040 \u003c.L3\u003e:\n        i++;\n  40:\t89 81       \tldd\tr24, Y+1\t; 0x01\n  42:\t9a 81       \tldd\tr25, Y+2\t; 0x02\n  44:\t01 96       \tadiw\tr24, 0x01\t; 1\n  46:\t9a 83       \tstd\tY+2, r25\t; 0x02\n  48:\t89 83       \tstd\tY+1, r24\t; 0x01\n\n0000004a \u003c.L2\u003e:\n    while(i \u003c 10000) {\n  4a:\t89 81       \tldd\tr24, Y+1\t; 0x01\n  4c:\t9a 81       \tldd\tr25, Y+2\t; 0x02\n  4e:\t80 31       \tcpi\tr24, 0x10\t; 16\n  50:\t97 42       \tsbci\tr25, 0x27\t; 39\n  52:\tb4 f3       \tbrlt\t.-20     \t; 0x40 \u003c.L3\u003e\n  54:\t80 e0       \tldi\tr24, 0x00\t; 0\n  56:\t90 e0       \tldi\tr25, 0x00\t; 0\n\n00000058 \u003c.Loc.5\u003e:\n    }\n}\n  58:\t0f 90       \tpop\tr0\n  5a:\t0f 90       \tpop\tr0\n  5c:\tdf 91       \tpop\tr29\n  5e:\tcf 91       \tpop\tr28\n  60:\t08 95       \tret\n00000030 \u003cmain\u003e:\n// #include \"wait.h\"\n\nint main(void) {\n  30:\tcf 93       \tpush\tr28\n  32:\tdf 93       \tpush\tr29\n  34:\t00 d0       \trcall\t.+0      \t; 0x36 \u003cL0^A\u003e\n\n00000036 \u003cL0^A\u003e:\n  36:\tcd b7       \tin\tr28, 0x3d\t; 61\n  38:\tde b7       \tin\tr29, 0x3e\t; 62\n\n0000003a \u003c.Loc.1\u003e:\n    int i = 0;\n  3a:\t1a 82       \tstd\tY+2, r1\t; 0x02\n  3c:\t19 82       \tstd\tY+1, r1\t; 0x01\n\n0000003e \u003c.Loc.2\u003e:\n    while(i \u003c 10000) {\n  3e:\t05 c0       \trjmp\t.+10     \t; 0x4a \u003c.L2\u003e\n\n00000040 \u003c.L3\u003e:\n        i++;\n  40:\t89 81       \tldd\tr24, Y+1\t; 0x01\n  42:\t9a 81       \tldd\tr25, Y+2\t; 0x02\n  44:\t01 96       \tadiw\tr24, 0x01\t; 1\n  46:\t9a 83       \tstd\tY+2, r25\t; 0x02\n  48:\t89 83       \tstd\tY+1, r24\t; 0x01\n\n0000004a \u003c.L2\u003e:\n    while(i \u003c 10000) {\n  4a:\t89 81       \tldd\tr24, Y+1\t; 0x01\n  4c:\t9a 81       \tldd\tr25, Y+2\t; 0x02\n  4e:\t80 31       \tcpi\tr24, 0x10\t; 16\n  50:\t97 42       \tsbci\tr25, 0x27\t; 39\n  52:\tb4 f3       \tbrlt\t.-20     \t; 0x40 \u003c.L3\u003e\n  54:\t80 e0       \tldi\tr24, 0x00\t; 0\n  56:\t90 e0       \tldi\tr25, 0x00\t; 0\n\n00000058 \u003c.Loc.5\u003e:\n    }\n}\n  58:\t0f 90       \tpop\tr0\n  5a:\t0f 90       \tpop\tr0\n  5c:\tdf 91       \tpop\tr29\n  5e:\tcf 91       \tpop\tr28\n  60:\t08 95       \tret\n```\n\nWith `-O1`:\n```\n00000030 \u003cmain\u003e:\n// #include \"wait.h\"\n\nint main(void) {\n  30:\t80 e1       \tldi\tr24, 0x10\t; 16\n  32:\t97 e2       \tldi\tr25, 0x27\t; 39\n\n00000034 \u003c.L2\u003e:\n    int i = 0;\n    while(i \u003c 10000) {\n  34:\t01 97       \tsbiw\tr24, 0x01\t; 1\n\n00000036 \u003c.LVL2\u003e:\n  36:\tf1 f7       \tbrne\t.-4      \t; 0x34 \u003c.L2\u003e\n\n00000038 \u003c.Loc.8\u003e:\n        i++;\n    }\n}\n  38:\t90 e0       \tldi\tr25, 0x00\t; 0\n  3a:\t80 e0       \tldi\tr24, 0x00\t; 0\n\n0000003c \u003c.LVL3\u003e:\n  3c:\t08 95       \tret\n```\n\nAnd finally with `-O2` and `-O3` we are back to optimizing everything away:\n```\n00000030 \u003cmain\u003e:\nint main(void) {\n    int i = 0;\n    while(i \u003c 10000) {\n        i++;\n    }\n}\n  30:\t90 e0       \tldi\tr25, 0x00\t; 0\n  32:\t80 e0       \tldi\tr24, 0x00\t; 0\n  34:\t08 95       \tret\n```\n\nSo I guess the TLDR here is try and test them all?\n\nThe case where the entire function is optimized away seems funny to me, what if you hand rolled a sleep with a big loop? Wouldn't that be grand if it just disappeared?\n"},{"slug":"temp-sensor","frontmatter":{"title":"Thermometer","date":"2022-07-21","tags":["thermometer"]},"content":"\nWhy buy a $10 thermometer when you can spend $100 and build one yourself in 15-20 hours?\n\n![Thermometer](/images/thermometer/thermometer.jpg)\n\nCaitlin kept saying the thermostat was off so I build this to find out. As a bonus, it also tells me my house is too humid so now I have to also figure that out. Fun.\n\nI was stubborn and wanted to use an attiny85 regardless of whether it was a good idea or not.\n5 pins isn't enough to control the display so I used a shift register as an IO expander to talk to the 1602 led display using SPI.\n\n![Prototype](/images/thermometer/prototype.jpg)\n\nThe temp/humidity sensor originally was an aht11 but apparently that unit is extremely sensitive to timing and I couldn't quite get it right with the attiny. I switched to an AM2301B and that used i2c for communication and worked really well.\n\nFirst try I soldered everything backwards but I eventually got it right.\n\n![Board](/images/thermometer/board.jpg)\n\n![Board2](/images/thermometer/board2.jpg)\n\n![Board3](/images/thermometer/board3.jpg)\n\n![Power Up](/images/thermometer/power-up.jpg)\n\nThe packing took forever and I ended up having to buy multiple project boxes to get the right size.\n\n![Packaging](/images/thermometer/packaging.jpg)\n\n![Assembly](/images/thermometer/assembly.jpg)\n\nAll done!\n\n![Final](/images/thermometer/final.jpg)\n"},{"slug":"bench-setup","frontmatter":{"title":"Bench Setup","date":"2022-07-16","tags":["bench"]},"content":"\n![Office](/images/office-early.jpg \"Office\")"},{"slug":"led-counter","frontmatter":{"title":"7 Segment LED Counter","date":"2022-07-15","tags":["led"]},"content":"\nThis was a funny project where I tried to build a simple 7 segment led counter without using a microcontroller. Each digit is controlled separately using 4026's and a sub 15 ms clock controlling which led is displayed, targeting a digit using a mux. 15 ms was chosen because it's faster than I could notice the counter changing, kinda like controlling led brightness using pwm. The counter ticks up based on a second slower clock or a button.\n\nI isolated the clocks into separate modules using 555 timers, both of which took forever to solder. One was in a fixed astable mode, the other a toggle-able monostable button debouncer or a bi-stable latch.\n\nRan out of diodes on this one...\n\n![LED Counter](/images/led-counter.jpg \"LED Counter\")\n"},{"slug":"first-oscillator","frontmatter":{"title":"Simple Oscillator","date":"2022-07-10","tags":["oscillator"]},"content":"\n![Oscillator](/images/first-oscillator.jpg \"An Oscillator\")\n\nProbably the first circuit I tried to solder together. An astable oscillator that was so\nastable the timing was all over the place!\n"}]},"__N_SSG":true},"page":"/","query":{},"buildId":"xX-TsidIi6DRZMeWD3LTA","assetPrefix":"https://probablyafire.com","isFallback":false,"gsp":true,"scriptLoader":[]}</script></body></html>
+</div></div></div></div></main><footer class="bg-slate-800 mt-8 py-4"><div class="container mx-auto flex justify-center text-slate-300">© 2022 Grant Cooksey</div></footer></div></div></div><script id="__NEXT_DATA__" type="application/json">{"props":{"pageProps":{"posts":[{"slug":"avr-toolchain","frontmatter":{"title":"The AVR Toolchain","date":"2022-09-30","tags":["gnu","gcc","avr","binutils"]},"content":"\nOne of the goals I had when I started getting into the digital side of electronics was to get a good grasp of the GNU toolchain and some of the avr tools. The arduino platform is nice but it doesn't really give you a good grasp of what's actually happening so here's a primer from an attiny perspective and some of the common tools used to understand what's in the final binary.\n\n[Theres already a great overview of the main avr toolchain](https://www.nongnu.org/avr-libc/user-manual/overview.html)), but this article provides some examples built against a simple binary to wrap your head around it all.\n\n# Tools\n\nAll of these examples are build with the attiny25 family in mind and uses a binary from a really dumb program in , `loop.c`:\n```\nint main(void) {\n    int i = 0;\n    while(i \u003c 10000) {\n        i++;\n    }\n}\n```\n\nThis was compiled to the `loop` binary using `avr-gcc -g -mmcu=avr25 -o loop loop.c`\n* `-g` to add debugging symbols, gives an easier time linking back to the individual line of code.\n* ` -mmcu=avr25` specifies the AVR instruction set architecture to use. [Change this to whatever chip you're targeting.](https://gcc.gnu.org/onlinedocs/gcc/AVR-Options.html#AVR-Options)\n\nAt a high level, avr-libc provides a standard c library that can be compiled with gcc. The tools here are mostly provided through binutils and you would normally use make to stitch it all together.\n\n## Objdump\n\nThis is the swiss army knife to picking apart object files. Typically used to take a look at the disassembly:\n```\n\u003e avr-objdump -m avr25 -S loop\n\nloop:     file format elf32-avr\n\nDisassembly of section .text:\n\n00000000 \u003cmain\u003e:\nint main(void) {\n   0:\tcf 93       \tpush\tr28\n   2:\tdf 93       \tpush\tr29\n   4:\t00 d0       \trcall\t.+0      \t; 0x6 \u003cL0^A\u003e\n\n00000006 \u003cL0^A\u003e:\n   6:\tcd b7       \tin\tr28, 0x3d\t; 61\n   8:\tde b7       \tin\tr29, 0x3e\t; 62\n\n0000000a \u003c.Loc.1\u003e:\n    int i = 0;\n   a:\t1a 82       \tstd\tY+2, r1\t; 0x02\n   c:\t19 82       \tstd\tY+1, r1\t; 0x01\n\n0000000e \u003c.Loc.2\u003e:\n    while(i \u003c 10000) {\n   e:\t05 c0       \trjmp\t.+10     \t; 0x1a \u003c.L2\u003e\n\n00000010 \u003c.L3\u003e:\n        i++;\n  10:\t89 81       \tldd\tr24, Y+1\t; 0x01\n  12:\t9a 81       \tldd\tr25, Y+2\t; 0x02\n  14:\t01 96       \tadiw\tr24, 0x01\t; 1\n  16:\t9a 83       \tstd\tY+2, r25\t; 0x02\n  18:\t89 83       \tstd\tY+1, r24\t; 0x01\n\n0000001a \u003c.L2\u003e:\n    while(i \u003c 10000) {\n  1a:\t89 81       \tldd\tr24, Y+1\t; 0x01\n  1c:\t9a 81       \tldd\tr25, Y+2\t; 0x02\n  1e:\t80 31       \tcpi\tr24, 0x10\t; 16\n  20:\t97 42       \tsbci\tr25, 0x27\t; 39\n  22:\tb4 f3       \tbrlt\t.-20     \t; 0x10 \u003c.L3\u003e\n  24:\t80 e0       \tldi\tr24, 0x00\t; 0\n  26:\t90 e0       \tldi\tr25, 0x00\t; 0\n\n00000028 \u003c.Loc.5\u003e:\n    }\n  28:\t0f 90       \tpop\tr0\n  2a:\t0f 90       \tpop\tr0\n  2c:\tdf 91       \tpop\tr29\n  2e:\tcf 91       \tpop\tr28\n  30:\t08 95       \tret\n```\n\nThe `-S` flag attempts to intermix the original source code along with the assembly.\n\nThe output of this dump is a little confusing at first but let's break it down. Looking at the counter increment code:\n```\n# This is the address in the elf file and the associated debugging symbol \u003c.L3\u003e\n00000010 \u003c.L3\u003e:\n\n# We're looking at the increment instruction here\n        i++;\n\n# 10 is the address, 89 81 is the actual data.\n# objdump translates this to ldd\tr24, Y+1 for an attiny.\n  10:\t89 81       \tldd\tr24, Y+1\t; 0x01\n  12:\t9a 81       \tldd\tr25, Y+2\t; 0x02\n  14:\t01 96       \tadiw\tr24, 0x01\t; 1\n  16:\t9a 83       \tstd\tY+2, r25\t; 0x02\n  18:\t89 83       \tstd\tY+1, r24\t; 0x01\n```\n\n## Hexdump\n\nProbably not that useful but shows a raw view of the file.\n\n1 byte per line dump:\n```\n\u003e hexdump -v -e '1/1 \"%02x \" \"\\n\"' loop\n7f\n45\n4c\n46\n01\n01\n01\n... a lot more is dumped\n```\n\n## Od - Octal Dump\n\nWay simpler to use than hexdump.\n\nNo address: `-An` and just text: `-a`.\n```\n\u003e od -An -a loop\ndel   E   L   F soh soh soh nul nul nul nul nul nul nul nul nul\nstx nul   S nul soh nul nul nul nul nul nul nul   4 nul nul nul\n84  bs nul nul  em nul nul nul   4 nul  sp nul stx nul   ( nul\ncr nul  ff nul soh nul nul nul   t nul nul nul nul nul nul nul\n... once again, lots more dumped\n```\n\n## Size\n\nEasy way to see the sizes of each section.\n```\n\u003e avr-size --format=SysV loop\nloop  :\nsection          size      addr\n.text              50         0\n.data               0   8388704\n.comment           36         0\n.debug_aranges     32         0\n.debug_info        85         0\n.debug_abbrev      78         0\n.debug_line        91         0\n.debug_frame       52         0\n.debug_str         95         0\nTotal             519\n```\n\n## Objcopy\n\nElf files contain a bunch of unnecessary sections that would be a waste to store in our limited flash space on the target, like all the debugging sections and comments. This command is similar to `strip` but also encodes the file from elf to various formats.\n\n### Intel hex\n\nMost microcontrollers code uploads use an ihex file format rather than an elf file.\n\nBuilding ihex from an elf:\n```\n\u003e avr-objcopy -j .text -j .data -O ihex loop loop.hex \u0026\u0026 cat loop.hex\n:10000000CF93DF9300D0CDB7DEB71A82198205C037\n:1000100089819A8101969A83898389819A81803125\n:100020009742B4F380E090E00F900F90DF91CF9172\n:02003000089531\n:00000001FF\n```\n\n### Binary\n\nYou can take a look at the raw binary if hex is annoying to look at. Not that this is really useful outside of educational purposes.\n\n```\n# first dump to a binary file\n\u003e avr-objcopy -O binary --only-section=.text main test.bin\n\n# Now display the binary for one instruction per line, `xxd` can handle the conversion:\n\u003e xxd -b -c 2 test.bin\n00000000: 00001110 11000000  ..\n00000002: 00010101 11000000  ..\n00000004: 00010100 11000000  ..\n00000006: 00010011 11000000  ..\n00000008: 00010010 11000000  ..\n0000000a: 00010001 11000000  ..\n0000000c: 00010000 11000000  ..\n0000000e: 00001111 11000000  ..\n00000010: 00001110 11000000  ..\n00000012: 00001101 11000000  ..\n00000014: 00001100 11000000  ..\n00000016: 00001011 11000000  ..\n00000018: 00001010 11000000  ..\n0000001a: 00001001 11000000  ..\n0000001c: 00001000 11000000  ..\n0000001e: 00010001 00100100  .$\n00000020: 00011111 10111110  ..\n00000022: 11001111 11100101  ..\n00000024: 11010010 11100000  ..\n00000026: 11011110 10111111  ..\n00000028: 11001101 10111111  ..\n0000002a: 00000010 11010000  ..\n0000002c: 00000100 11000000  ..\n0000002e: 11101000 11001111  ..\n00000030: 10010000 11100000  ..\n00000032: 10000000 11100000  ..\n00000034: 00001000 10010101  ..\n00000036: 11111000 10010100  ..\n00000038: 11111111 11001111  ..\n\n```\n\n## AVR GCC\n\nThis is the main compiler I use when working with avr chips.\n\n[Supported architectures](https://gcc.gnu.org/onlinedocs/gcc/AVR-Options.html#AVR-Options)\n\n[Wiki](https://gcc.gnu.org/wiki/avr-gcc)\n\n### Standards\n\nC has published new standard for the language over time. New standards bring new features or datatypes. For an example of one I like, c99 introduced boolean datatypes. There are a number of different standards, as of 2022 theres c89, gnu89, c94, c99, gnu99, c11, gnu11, c17, gnu17, c2x, and gnu2x. I'm not sure why each release has a GNU equivalent or the history behind that, [but there are differences, mostly a couple keywords and macros](https://clang.llvm.org/docs/UsersManual.html#differences-between-various-standard-modes).\n\n**Note** use `gnu*` standards for arduino, I've seen some cases in the [SpencerKonde ATtiny core](https://github.com/SpenceKonde/ATTinyCore) where the `asm` keyword is used.\n\n### Linking\n\nThe avr-gcc compiler not only has many AVR ISAs compilation support, it also provides the linker with defaults. This means that the architecture flag `-m` needs to always be specified.\n\nFor AVRs, the interrupt table starts at 0x000. Dumping the table for an attiny85, compiled with `-mmcu=attiny85`:\n```\n\u003e avr-objdump -S  -m avr25 loop\n...\n00000000 \u003c__vectors\u003e:\n   0:\t0e c0       \trjmp\t.+28     \t; 0x1e \u003c__ctors_end\u003e\n   2:\t15 c0       \trjmp\t.+42     \t; 0x2e \u003c__bad_interrupt\u003e\n   4:\t14 c0       \trjmp\t.+40     \t; 0x2e \u003c__bad_interrupt\u003e\n   6:\t13 c0       \trjmp\t.+38     \t; 0x2e \u003c__bad_interrupt\u003e\n   8:\t12 c0       \trjmp\t.+36     \t; 0x2e \u003c__bad_interrupt\u003e\n   a:\t11 c0       \trjmp\t.+34     \t; 0x2e \u003c__bad_interrupt\u003e\n   c:\t10 c0       \trjmp\t.+32     \t; 0x2e \u003c__bad_interrupt\u003e\n   e:\t0f c0       \trjmp\t.+30     \t; 0x2e \u003c__bad_interrupt\u003e\n  10:\t0e c0       \trjmp\t.+28     \t; 0x2e \u003c__bad_interrupt\u003e\n  12:\t0d c0       \trjmp\t.+26     \t; 0x2e \u003c__bad_interrupt\u003e\n  14:\t0c c0       \trjmp\t.+24     \t; 0x2e \u003c__bad_interrupt\u003e\n  16:\t0b c0       \trjmp\t.+22     \t; 0x2e \u003c__bad_interrupt\u003e\n  18:\t0a c0       \trjmp\t.+20     \t; 0x2e \u003c__bad_interrupt\u003e\n  1a:\t09 c0       \trjmp\t.+18     \t; 0x2e \u003c__bad_interrupt\u003e\n  1c:\t08 c0       \trjmp\t.+16     \t; 0x2e \u003c__bad_interrupt\u003e\n```\n\nCompare this to the Arduino Uno's ATmega328p, compiled with `-mmcu=atmega328p`:\n```\n\u003e avr-objdump -S  -m avr5 loop\n...\n00000000 \u003c__vectors\u003e:\n   0:\t0c 94 34 00 \tjmp\t0x68\t; 0x68 \u003c__ctors_end\u003e\n   4:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n   8:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n   c:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  10:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  14:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  18:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  1c:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  20:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  24:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  28:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  2c:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  30:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  34:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  38:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  3c:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  40:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  44:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  48:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  4c:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  50:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  54:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  58:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  5c:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  60:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n  64:\t0c 94 3e 00 \tjmp\t0x7c\t; 0x7c \u003c__bad_interrupt\u003e\n```\n\n\n## Avrdude\n\nPretty slick tool to read and write memory on your avr chip.\n\nThe Arduino platform has a pretty good integration with these tools. I found it to be helpful to turn the ide verbosity up to read the avrdude commands that are run. There's a config file that comes from whatever core you are using that might be useful.\n\nThe following examples are based on an attiny85 connected to a Sparkfun tinyIsp programmer plugged into a usb port.\n\nUpload an ihex file:\n```\n# -U [memory(flash/eeprom)]:[w/r]:[input/output file]:[i stands for intel hex]\navrdude -v -c usbtiny -B8 -p attiny85 -U flash:w:hello.hex:i\n```\n\nDump the flash:\n```\navrdude -v -c usbtiny -B8 -p attiny85 -U flash:r:dump.hex:i\navr-objdump -sSd -m avr25 dump.hex\n```\n\nTerminal mode to dump part of eeprom:\n```\navrdude -v -c usbtiny -B8 -p attiny85 -t\n\u003e\u003e\u003e dump eeprom 0 16\n\nReading | ################################################## | 100% 0.02s\n\n0000  ff ff ff ff ff ff ff ff  ff ff ff ff ff ff ff ff  |................|\n```\n\nChanging the clock speed from 8Mhz internal to 1Mhz internal. Note that the F_CPU macro in your code needs to match the fuse value. Use a fuse calculator for these.\nSetting the fuses:\n```\navrdude -v -c usbtiny -B8 -p attiny85 -t\n\u003e\u003e\u003e dump lfuse\n\nReading | ################################################## | 100% 0.00s\n\n0000  e2                                                |.               |\n\n\u003e\u003e\u003e write lfuse 0 0x62\n\nInfo: Writing 1 bytes starting from address 0x00\n\nWriting | ################################################## | 100% 0.01s\n\n\u003e\u003e\u003e read lfuse\n\nReading | ################################################## | 100% 0.00s\n\n0000  62                                                |b               |\n```\n"},{"slug":"gcc-optimization-levels","frontmatter":{"title":"GCC Optimization Levels","date":"2022-08-10","tags":["debugger","gcc","avr"]},"content":"\nOptimization levels are really weird.\n\nUsing the function and compiling for an attiny85, ie [`--mmcu=attiny85`](https://www.nongnu.org/avr-libc/user-manual/using_tools.html).\n```\nint main(void) {\n    int i = 0;\n    while(i \u003c 10000) {\n        i++;\n    }\n}\n```\n\nWe can disassemble with `avr-objdump -sS -m avr25 led`. As a disclaimer, I'm not pretending I know what any of this means.\n\nUsing `-Os` ie optimize for code side, it looks like the entire function is optimized away!\n```\n\u003e avr-objdump -sS -m avr25 led\n...\n00000030 \u003cmain\u003e:\n{\n    int i = 0;\n    while(i \u003c 10000) {\n        i++;\n    }\n}\n  30:\t90 e0       \tldi\tr25, 0x00\t; 0\n  32:\t80 e0       \tldi\tr24, 0x00\t; 0\n  34:\t08 95       \tret\n```\n\nAnd by comparison, using `-O0`, fastest compile time and the gcc default:\n```\n00000030 \u003cmain\u003e:\n// #include \"wait.h\"\n\nint main(void) {\n  30:\tcf 93       \tpush\tr28\n  32:\tdf 93       \tpush\tr29\n  34:\t00 d0       \trcall\t.+0      \t; 0x36 \u003cL0^A\u003e\n\n00000036 \u003cL0^A\u003e:\n  36:\tcd b7       \tin\tr28, 0x3d\t; 61\n  38:\tde b7       \tin\tr29, 0x3e\t; 62\n\n0000003a \u003c.Loc.1\u003e:\n    int i = 0;\n  3a:\t1a 82       \tstd\tY+2, r1\t; 0x02\n  3c:\t19 82       \tstd\tY+1, r1\t; 0x01\n\n0000003e \u003c.Loc.2\u003e:\n    while(i \u003c 10000) {\n  3e:\t05 c0       \trjmp\t.+10     \t; 0x4a \u003c.L2\u003e\n\n00000040 \u003c.L3\u003e:\n        i++;\n  40:\t89 81       \tldd\tr24, Y+1\t; 0x01\n  42:\t9a 81       \tldd\tr25, Y+2\t; 0x02\n  44:\t01 96       \tadiw\tr24, 0x01\t; 1\n  46:\t9a 83       \tstd\tY+2, r25\t; 0x02\n  48:\t89 83       \tstd\tY+1, r24\t; 0x01\n\n0000004a \u003c.L2\u003e:\n    while(i \u003c 10000) {\n  4a:\t89 81       \tldd\tr24, Y+1\t; 0x01\n  4c:\t9a 81       \tldd\tr25, Y+2\t; 0x02\n  4e:\t80 31       \tcpi\tr24, 0x10\t; 16\n  50:\t97 42       \tsbci\tr25, 0x27\t; 39\n  52:\tb4 f3       \tbrlt\t.-20     \t; 0x40 \u003c.L3\u003e\n  54:\t80 e0       \tldi\tr24, 0x00\t; 0\n  56:\t90 e0       \tldi\tr25, 0x00\t; 0\n\n00000058 \u003c.Loc.5\u003e:\n    }\n}\n  58:\t0f 90       \tpop\tr0\n  5a:\t0f 90       \tpop\tr0\n  5c:\tdf 91       \tpop\tr29\n  5e:\tcf 91       \tpop\tr28\n  60:\t08 95       \tret\n00000030 \u003cmain\u003e:\n// #include \"wait.h\"\n\nint main(void) {\n  30:\tcf 93       \tpush\tr28\n  32:\tdf 93       \tpush\tr29\n  34:\t00 d0       \trcall\t.+0      \t; 0x36 \u003cL0^A\u003e\n\n00000036 \u003cL0^A\u003e:\n  36:\tcd b7       \tin\tr28, 0x3d\t; 61\n  38:\tde b7       \tin\tr29, 0x3e\t; 62\n\n0000003a \u003c.Loc.1\u003e:\n    int i = 0;\n  3a:\t1a 82       \tstd\tY+2, r1\t; 0x02\n  3c:\t19 82       \tstd\tY+1, r1\t; 0x01\n\n0000003e \u003c.Loc.2\u003e:\n    while(i \u003c 10000) {\n  3e:\t05 c0       \trjmp\t.+10     \t; 0x4a \u003c.L2\u003e\n\n00000040 \u003c.L3\u003e:\n        i++;\n  40:\t89 81       \tldd\tr24, Y+1\t; 0x01\n  42:\t9a 81       \tldd\tr25, Y+2\t; 0x02\n  44:\t01 96       \tadiw\tr24, 0x01\t; 1\n  46:\t9a 83       \tstd\tY+2, r25\t; 0x02\n  48:\t89 83       \tstd\tY+1, r24\t; 0x01\n\n0000004a \u003c.L2\u003e:\n    while(i \u003c 10000) {\n  4a:\t89 81       \tldd\tr24, Y+1\t; 0x01\n  4c:\t9a 81       \tldd\tr25, Y+2\t; 0x02\n  4e:\t80 31       \tcpi\tr24, 0x10\t; 16\n  50:\t97 42       \tsbci\tr25, 0x27\t; 39\n  52:\tb4 f3       \tbrlt\t.-20     \t; 0x40 \u003c.L3\u003e\n  54:\t80 e0       \tldi\tr24, 0x00\t; 0\n  56:\t90 e0       \tldi\tr25, 0x00\t; 0\n\n00000058 \u003c.Loc.5\u003e:\n    }\n}\n  58:\t0f 90       \tpop\tr0\n  5a:\t0f 90       \tpop\tr0\n  5c:\tdf 91       \tpop\tr29\n  5e:\tcf 91       \tpop\tr28\n  60:\t08 95       \tret\n```\n\nWith `-O1`:\n```\n00000030 \u003cmain\u003e:\n// #include \"wait.h\"\n\nint main(void) {\n  30:\t80 e1       \tldi\tr24, 0x10\t; 16\n  32:\t97 e2       \tldi\tr25, 0x27\t; 39\n\n00000034 \u003c.L2\u003e:\n    int i = 0;\n    while(i \u003c 10000) {\n  34:\t01 97       \tsbiw\tr24, 0x01\t; 1\n\n00000036 \u003c.LVL2\u003e:\n  36:\tf1 f7       \tbrne\t.-4      \t; 0x34 \u003c.L2\u003e\n\n00000038 \u003c.Loc.8\u003e:\n        i++;\n    }\n}\n  38:\t90 e0       \tldi\tr25, 0x00\t; 0\n  3a:\t80 e0       \tldi\tr24, 0x00\t; 0\n\n0000003c \u003c.LVL3\u003e:\n  3c:\t08 95       \tret\n```\n\nAnd finally with `-O2` and `-O3` we are back to optimizing everything away:\n```\n00000030 \u003cmain\u003e:\nint main(void) {\n    int i = 0;\n    while(i \u003c 10000) {\n        i++;\n    }\n}\n  30:\t90 e0       \tldi\tr25, 0x00\t; 0\n  32:\t80 e0       \tldi\tr24, 0x00\t; 0\n  34:\t08 95       \tret\n```\n\nSo I guess the TLDR here is try and test them all?\n\nThe case where the entire function is optimized away seems funny to me, what if you hand rolled a sleep with a big loop? Wouldn't that be grand if it just disappeared?\n"},{"slug":"temp-sensor","frontmatter":{"title":"Thermometer","date":"2022-07-21","tags":["thermometer"]},"content":"\nWhy buy a $10 thermometer when you can spend $100 and build one yourself in 15-20 hours?\n\n![Thermometer](/images/thermometer/thermometer.jpg)\n\nCaitlin kept saying the thermostat was off so I build this to find out. As a bonus, it also tells me my house is too humid so now I have to also figure that out. Fun.\n\nI was stubborn and wanted to use an attiny85 regardless of whether it was a good idea or not.\n5 pins isn't enough to control the display so I used a shift register as an IO expander to talk to the 1602 led display using SPI.\n\n![Prototype](/images/thermometer/prototype.jpg)\n\nThe temp/humidity sensor originally was an aht11 but apparently that unit is extremely sensitive to timing and I couldn't quite get it right with the attiny. I switched to an AM2301B and that used i2c for communication and worked really well.\n\nFirst try I soldered everything backwards but I eventually got it right.\n\n![Board](/images/thermometer/board.jpg)\n\n![Board2](/images/thermometer/board2.jpg)\n\n![Board3](/images/thermometer/board3.jpg)\n\n![Power Up](/images/thermometer/power-up.jpg)\n\nThe packing took forever and I ended up having to buy multiple project boxes to get the right size.\n\n![Packaging](/images/thermometer/packaging.jpg)\n\n![Assembly](/images/thermometer/assembly.jpg)\n\nAll done!\n\n![Final](/images/thermometer/final.jpg)\n"},{"slug":"bench-setup","frontmatter":{"title":"Bench Setup","date":"2022-07-16","tags":["bench"]},"content":"\n![Office](/images/office-early.jpg \"Office\")"},{"slug":"led-counter","frontmatter":{"title":"7 Segment LED Counter","date":"2022-07-15","tags":["led"]},"content":"\nThis was a funny project where I tried to build a simple 7 segment led counter without using a microcontroller. Each digit is controlled separately using 4026's and a sub 15 ms clock controlling which led is displayed, targeting a digit using a mux. 15 ms was chosen because it's faster than I could notice the counter changing, kinda like controlling led brightness using pwm. The counter ticks up based on a second slower clock or a button.\n\nI isolated the clocks into separate modules using 555 timers, both of which took forever to solder. One was in a fixed astable mode, the other a toggle-able monostable button debouncer or a bi-stable latch.\n\nRan out of diodes on this one...\n\n![LED Counter](/images/led-counter.jpg \"LED Counter\")\n"},{"slug":"first-oscillator","frontmatter":{"title":"Simple Oscillator","date":"2022-07-10","tags":["oscillator"]},"content":"\n![Oscillator](/images/first-oscillator.jpg \"An Oscillator\")\n\nProbably the first circuit I tried to solder together. An astable oscillator that was so\nastable the timing was all over the place!\n"}]},"__N_SSG":true},"page":"/","query":{},"buildId":"Zbns44Kbi7Zsk4KPeo1xS","assetPrefix":"https://probablyafire.com","isFallback":false,"gsp":true,"scriptLoader":[]}</script></body></html>
