@@ -10,6 +10,8 @@ tags:
 
 One of the goals I had when I started getting into the digital side of electronics was to get a good grasp of the GNU toolchain and some of the avr tools. The arduino platform is nice but it doesn't really give you a good grasp of what's actually happening so here's a primer from an attiny perspective and some of the common tools used to understand what's in the final binary.
 
+[Theres already a great overview of the main avr toolchain](https://www.nongnu.org/avr-libc/user-manual/overview.html)), but this article provides some examples built against a simple binary to wrap your head around it all.
+
 # Tools
 
 All of these examples are build with the attiny25 family in mind and uses a binary from a really dumb program in , `loop.c`:
@@ -25,6 +27,8 @@ int main(void) {
 This was compiled to the `loop` binary using `avr-gcc -g -mmcu=avr25 -o loop loop.c`
 * `-g` to add debugging symbols, gives an easier time linking back to the individual line of code.
 * ` -mmcu=avr25` specifies the AVR instruction set architecture to use. [Change this to whatever chip you're targeting.](https://gcc.gnu.org/onlinedocs/gcc/AVR-Options.html#AVR-Options)
+
+At a high level, avr-libc provides a standard c library that can be compiled with gcc. The tools here are mostly provided through binutils and you would normally use make to stitch it all together.
 
 ## Objdump
 
@@ -84,38 +88,76 @@ int main(void) {
 
 The `-S` flag attempts to intermix the original source code along with the assembly.
 
-The output of this dump is a little confusing at first
+The output of this dump is a little confusing at first but let's break it down. Looking at the counter increment code:
+```
+# This is the address in the elf file and the associated debugging symbol <.L3>
+00000010 <.L3>:
+
+# We're looking at the increment instruction here
+        i++;
+
+# 10 is the address, 89 81 is the actual data.
+# objdump translates this to ldd	r24, Y+1 for an attiny.
+  10:	89 81       	ldd	r24, Y+1	; 0x01
+  12:	9a 81       	ldd	r25, Y+2	; 0x02
+  14:	01 96       	adiw	r24, 0x01	; 1
+  16:	9a 83       	std	Y+2, r25	; 0x02
+  18:	89 83       	std	Y+1, r24	; 0x01
+```
 
 ## Hexdump
 
-Probably not that useful but shows a raw view of the file
+Probably not that useful but shows a raw view of the file.
 
-1 byte per line dump
+1 byte per line dump:
 ```
-hexdump -v -e '1/1 "%02x " "\n"' loop
+> hexdump -v -e '1/1 "%02x " "\n"' loop
+7f
+45
+4c
+46
+01
+01
+01
+... a lot more is dumped
 ```
 
 ## Od - Octal Dump
 
-Way simpler to use than hexdump
+Way simpler to use than hexdump.
 
-No address: `-An` and just text: `-a`
+No address: `-An` and just text: `-a`.
 ```
-od -An -a loop
+> od -An -a loop
+del   E   L   F soh soh soh nul nul nul nul nul nul nul nul nul
+stx nul   S nul soh nul nul nul nul nul nul nul   4 nul nul nul
+84  bs nul nul  em nul nul nul   4 nul  sp nul stx nul   ( nul
+cr nul  ff nul soh nul nul nul   t nul nul nul nul nul nul nul
+... once again, lots more dumped
 ```
 
 ## Size
 
-Easy way to see the sizes of each section:
+Easy way to see the sizes of each section.
 ```
- avr-size --format=SysV loop
+> avr-size --format=SysV loop
+loop  :
+section          size      addr
+.text              50         0
+.data               0   8388704
+.comment           36         0
+.debug_aranges     32         0
+.debug_info        85         0
+.debug_abbrev      78         0
+.debug_line        91         0
+.debug_frame       52         0
+.debug_str         95         0
+Total             519
 ```
 
 ## Objcopy
 
-This command is commonly used to strip out
-
-Elf files contain a bunch of unnecessary sections, like all the debugging sections and comments, and it would be a waste to store these sections in our limited flash space. This command is similar to `strip` but also encodes the file from elf to various formats.
+Elf files contain a bunch of unnecessary sections that would be a waste to store in our limited flash space on the target, like all the debugging sections and comments. This command is similar to `strip` but also encodes the file from elf to various formats.
 
 ### Intel hex
 
@@ -123,7 +165,12 @@ Most microcontrollers code uploads use an ihex file format rather than an elf fi
 
 Building ihex from an elf:
 ```
-avr-objcopy -j .text -j .data -O ihex hello.o hello.hex
+> avr-objcopy -j .text -j .data -O ihex loop loop.hex && cat loop.hex
+:10000000CF93DF9300D0CDB7DEB71A82198205C037
+:1000100089819A8101969A83898389819A81803125
+:100020009742B4F380E090E00F900F90DF91CF9172
+:02003000089531
+:00000001FF
 ```
 
 ### Binary
@@ -170,15 +217,11 @@ You can take a look at the raw binary if hex is annoying to look at. Not that th
 
 ## AVR GCC
 
+This is the main compiler I use when working with avr chips.
+
 [Supported architectures](https://gcc.gnu.org/onlinedocs/gcc/AVR-Options.html#AVR-Options)
 
 [Wiki](https://gcc.gnu.org/wiki/avr-gcc)
-
-### Optmization levels
-
-GNU gcc offers a number of optimizations that balance tradeoffs between compilation time and advanced optimizations.
-
-[Most embedded programming uses `-0s`](https://interrupt.memfault.com/blog/best-and-worst-gcc-clang-compiler-flags#-os) to optimize for code space but [it's not the only choice](https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html).
 
 ### Standards
 
@@ -298,7 +341,3 @@ Reading | ################################################## | 100% 0.00s
 
 0000  62                                                |b               |
 ```
-
-# References
-
-[A fantastic overview of the main avr toolchain.](https://www.nongnu.org/avr-libc/user-manual/overview.html)
