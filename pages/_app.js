@@ -9,7 +9,11 @@ function App({ Component, pageProps }) {
       <Head>
         <title>Fire!</title>
         <link rel="shortcut icon" href="/favicon/favicon.ico" />
-        <Script
+      </Head>
+      <Layout>
+        <Component {...pageProps} />
+      </Layout>
+      <Script
           strategy="afterInteractive"
           src={`https://www.googletagmanager.com/gtag/js?id=G-4KM1ERYDXT`}
         />
@@ -26,10 +30,6 @@ function App({ Component, pageProps }) {
             `,
           }}
         />
-      </Head>
-      <Layout>
-        <Component {...pageProps} />
-      </Layout>
     </div>
   );
 }
