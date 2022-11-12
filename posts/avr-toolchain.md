@@ -10,7 +10,7 @@ tags:
 
 One of the goals I had when I started getting into the digital side of electronics was to get a good grasp of the GNU toolchain and some of the avr tools. The arduino platform is nice but it doesn't really give you a good grasp of what's actually happening so here's a primer from an attiny perspective and some of the common tools used to understand what's in the final binary.
 
-[Theres already a great overview of the main avr toolchain](https://www.nongnu.org/avr-libc/user-manual/overview.html)), but this article provides some examples built against a simple binary to wrap your head around it all.
+[There's already a great overview of the main avr toolchain](https://www.nongnu.org/avr-libc/user-manual/overview.html)), but this article provides some examples built against a simple binary to wrap your head around it all.
 
 # Tools
 
